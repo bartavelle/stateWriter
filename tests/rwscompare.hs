@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, FlexibleContexts #-}
+{-# LANGUAGE GADTs, FlexibleContexts, FlexibleInstances #-}
 module Main where
 
 import Control.Monad.Trans.RSS.Strict
@@ -6,13 +6,15 @@ import Control.Monad.RWS
 import Test.Hspec
 import Test.QuickCheck
 import Control.Applicative
+import Control.Monad.Free
 
-data ActionF next = Tell        [Int]  (ActionF next)
-                  | SetState    Int    (ActionF next)
-                  | AskAndStore IModification (ActionF next)
-                  | Modify      SModification (ActionF next)
-                  | GetAndStore IModification (ActionF next)
-                  | Return      next
+data ActionF next = Tell        [Int]         next
+                  | SetState    Int           next
+                  | AskAndStore IModification next
+                  | Modify      SModification next
+                  | GetAndStore IModification next
+
+type Action = Free ActionF
 
 data SModification = SId
                    | Double
@@ -33,7 +35,11 @@ instance Arbitrary next => Arbitrary (ActionF next) where
                           , (20, AskAndStore <$> arbitrary <*> arbitrary)
                           , (20, GetAndStore <$> arbitrary <*> arbitrary)
                           , (20, Modify      <$> arbitrary <*> arbitrary)
-                          , (1,  Return      <$> arbitrary)
+                          ]
+
+instance Arbitrary (Action Int) where
+    arbitrary = frequency [ (1, Pure <$> arbitrary)
+                          , (9, Free <$> arbitrary) 
                           ]
 
 evaluateIM :: IModification -> (Int -> [Int])
@@ -50,15 +56,14 @@ instance Show next => Show (ActionF next) where
     show (AskAndStore i n) = "AskAndStore " ++ show i ++ " / " ++ show n
     show (GetAndStore i n) = "GetAndStore " ++ show i ++ " / " ++ show n
     show (Modify s n) = "Modify " ++ show s ++ " / " ++ show n
-    show (Return n) = "Return " ++ show n
 
-evaluateActions :: (MonadRWS Int [Int] Int m) => ActionF x -> m x
-evaluateActions (Tell x next)        = tell x >>  evaluateActions next
-evaluateActions (SetState s next)    = put s  >>  evaluateActions next
-evaluateActions (AskAndStore f next) = ask >>= tell . evaluateIM f >> evaluateActions next
-evaluateActions (GetAndStore f next) = get >>= tell . evaluateIM f >> evaluateActions next
-evaluateActions (Modify f next) = modify (evaluateSM f) >> evaluateActions next
-evaluateActions (Return next) = return next
+evaluateActions :: (MonadRWS Int [Int] Int m) => Action x -> m x
+evaluateActions (Free (Tell x next))        = tell x >>  evaluateActions next
+evaluateActions (Free (SetState s next))    = put s  >>  evaluateActions next
+evaluateActions (Free (AskAndStore f next)) = ask >>= tell . evaluateIM f >> evaluateActions next
+evaluateActions (Free (GetAndStore f next)) = get >>= tell . evaluateIM f >> evaluateActions next
+evaluateActions (Free (Modify f next)) = modify (evaluateSM f) >> evaluateActions next
+evaluateActions (Pure x) = return x
 
 main :: IO ()
 main = hspec $ do
@@ -68,5 +73,5 @@ main = hspec $ do
         it "logs stuff in the right order, with tellElement" $
             property $ \list -> runRSS (mapM_ tellElement (list :: [Int])) () () == ((), (), list)
         it "interprets actions the same" $
-            property $ \actions -> runRSS (evaluateActions (actions :: ActionF Int)) 42 12 == runRWS (evaluateActions actions) 42 12
+            property $ \actions -> runRSS (evaluateActions (actions :: Action Int)) 42 12 == runRWS (evaluateActions actions) 42 12
 
