@@ -19,7 +19,7 @@ library
   exposed-modules:     Control.Monad.Trans.RSS.Lazy, Control.Monad.Trans.RSS.Strict
   -- other-modules:       
   other-extensions:    FlexibleInstances, MultiParamTypeClasses
-  build-depends:       base >=4.6 && <4.7, transformers >=0.3 && <0.4, mtl >=2.1 && <2.2
+  build-depends:       base >=4.6 && <4.7, transformers >=0.3 && <0.4, mtl >=2.1 && <2.2, lens >= 3.9 && < 4
   -- hs-source-dirs:      
   default-language:    Haskell2010
 

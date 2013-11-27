@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FlexibleContexts #-}
 module Control.Monad.Trans.RSS.Lazy where
 
 import Control.Applicative
@@ -7,42 +7,46 @@ import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Class
 import Data.Functor.Identity
+import Data.Monoid
 
 import Control.Monad.State
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Control.Monad.RWS
 
+import Control.Lens.Cons
+import Control.Lens.Internal.Review
+
 type RSS r w s = RSST r w s Identity
 
-runRSS :: RSS r w s a -> r -> s -> (a,s,[w])
+runRSS :: Monoid w => RSS r w s a -> r -> s -> (a,s,w)
 runRSS m r s =
-    let (a,(s',w)) = runIdentity (runRSST m r (s, []))
-    in  (a,s',reverse w)
+    let (a,(s',w)) = runIdentity (runRSST m r (s, mempty))
+    in  (a,s', w)
 
-newtype RSST r w s m a = RSST { runRSST :: r -> (s,[w]) -> m (a, (s, [w])) }
+newtype RSST r w s m a = RSST { runRSST :: r -> (s,w) -> m (a, (s, w)) }
 
 -- | Evaluate a computation with the given initial state and environment,
 -- returning the final value and output, discarding the final state.
-evalRSST :: (Monad m)
+evalRSST :: (Monad m, Monoid w)
             => RSST r w s m a     -- ^computation to execute
             -> r                  -- ^initial environment
             -> s                  -- ^initial value
-            -> m (a,[w])          -- ^computation yielding final value and output
+            -> m (a,w)          -- ^computation yielding final value and output
 evalRSST m r s = do
-    ~(a, (_, w)) <- runRSST m r (s,[])
-    return (a, reverse w)
+    ~(a, (_, w)) <- runRSST m r (s,mempty)
+    return (a, w)
 
 -- | Evaluate a computation with the given initial state and environment,
 -- returning the final state and output, discarding the final value.
-execRSST :: (Monad m)
+execRSST :: (Monad m, Monoid w)
             => RSST r w s m a      -- ^computation to execute
             -> r                   -- ^initial environment
             -> s                   -- ^initial value
-            -> m (s, [w])          -- ^computation yielding final state and output
+            -> m (s, w)          -- ^computation yielding final state and output
 execRSST m r s = do
-        ~(_, (s', w)) <- runRSST m r (s,[])
-        return (s', reverse w)
+        ~(_, (s', w)) <- runRSST m r (s,mempty)
+        return (s', w)
 
 instance (Functor m) => Functor (RSST r w s m) where
     fmap f m = RSST $ \r s ->
@@ -92,9 +96,9 @@ instance Monad m => MonadReader r (RSST r w s m) where
     local f rw = RSST $ \r s -> runRSST rw (f r) s
     reader f = RSST $ \r s -> return (f r, s)
 
-instance Monad m => MonadWriter [w] (RSST r w s m) where
+instance (Monoid w, Monad m) => MonadWriter w (RSST r w s m) where
     writer (a,w) = tell w >> return a
-    tell w = RSST $ \_ (s, ow) -> return ((), (s, reverse w ++ ow))
+    tell w = RSST $ \_ (s, ow) -> return ((), (s, ow <> w))
     listen rw = RSST $ \r s -> do
         (a, (ns, nw)) <- runRSST rw r s
         return ((a, nw), (ns, nw))
@@ -102,8 +106,8 @@ instance Monad m => MonadWriter [w] (RSST r w s m) where
         ( (a, fw), (s', w) ) <- runRSST rw r s
         return (a, (s', fw w))
 
-instance Monad m => MonadRWS r [w] s (RSST r w s m)
+instance (Monoid w, Monad m) => MonadRWS r w s (RSST r w s m)
 
-tellElement :: Monad m => w -> RSST r w s m ()
-tellElement w = RSST $ \_ (s, ow) -> return ((), (s, w : ow))
+tellElement :: (Monad m, Snoc Reviewed Identity cns cns e e) => e -> RSST r cns s m ()
+tellElement w = RSST $ \_ (s, ow) -> return ((), (s, snoc ow w))
 
