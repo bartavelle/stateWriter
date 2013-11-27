@@ -18,7 +18,7 @@ type RSS r w s = RSST r w s Identity
 runRSS :: RSS r w s a -> r -> s -> (a,s,[w])
 runRSS m r s =
     let (a,(s',w)) = runIdentity (runRSST m r (s, []))
-    in  (a,s',w)
+    in  (a,s',reverse w)
 
 newtype RSST r w s m a = RSST { runRSST :: r -> (s,[w]) -> m (a, (s, [w])) }
 
