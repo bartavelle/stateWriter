@@ -28,13 +28,13 @@ instance Arbitrary IModification where
     arbitrary = arbitraryBoundedEnum
 
 instance Arbitrary next => Arbitrary (ActionF next) where
-    arbitrary = oneof [ Tell        <$> arbitrary <*> arbitrary
-                      , SetState    <$> arbitrary <*> arbitrary
-                      , AskAndStore <$> arbitrary <*> arbitrary
-                      , GetAndStore <$> arbitrary <*> arbitrary
-                      , Modify      <$> arbitrary <*> arbitrary
-                      , Return      <$> arbitrary
-                      ]
+    arbitrary = frequency [ (5,  Tell        <$> arbitrary <*> arbitrary)
+                          , (5,  SetState    <$> arbitrary <*> arbitrary)
+                          , (20, AskAndStore <$> arbitrary <*> arbitrary)
+                          , (20, GetAndStore <$> arbitrary <*> arbitrary)
+                          , (20, Modify      <$> arbitrary <*> arbitrary)
+                          , (1,  Return      <$> arbitrary)
+                          ]
 
 evaluateIM :: IModification -> (Int -> [Int])
 evaluateIM IReturn x = [x]
