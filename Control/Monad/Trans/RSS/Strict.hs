@@ -94,7 +94,7 @@ instance Monad m => MonadReader r (RSST r w s m) where
 
 instance Monad m => MonadWriter [w] (RSST r w s m) where
     writer (a,w) = tell w >> return a
-    tell w = RSST $ \_ (s, ow) -> return ((), (s, ow ++ reverse w))
+    tell w = RSST $ \_ (s, ow) -> return ((), (s, reverse w ++ ow))
     listen rw = RSST $ \r s -> do
         (a, (ns, nw)) <- runRSST rw r s
         return ((a, nw), (ns, nw))
@@ -103,4 +103,7 @@ instance Monad m => MonadWriter [w] (RSST r w s m) where
         return (a, (s', fw w))
 
 instance Monad m => MonadRWS r [w] s (RSST r w s m)
+
+tellElement :: Monad m => w -> RSST r w s m ()
+tellElement w = RSST $ \_ (s, ow) -> return ((), (s, w : ow))
 
