@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                fixedWriter
-version:             0.1.0
+version:             0.1.2
 synopsis:            A version of the RWS and Writer monad transformers that just work with lists.
 -- description:         
 license:             BSD3
