@@ -82,23 +82,23 @@ instance (MonadIO m) => MonadIO (RSST r w s m) where
 instance Monad m => MonadState s (RSST r w s m) where
     get = RSST $ \_ (s,w) -> return (s,(s,w))
     put ns = RSST $ \_ (_,w) -> return ((),(ns,w))
-    state f = RSST $! \_ (s,w) -> case f s of
+    state f = RSST $ \_ (s,w) -> case f s of
                                       (a,s') -> return (a, (s', w))
 
 
 
 instance Monad m => MonadReader r (RSST r w s m) where
-    ask = RSST $! \r s -> return (r, s)
-    local f rw = RSST $! \r s -> runRSST rw (f r) s
-    reader f = RSST $! \r s -> return (f r, s)
+    ask = RSST $ \r s -> return (r, s)
+    local f rw = RSST $ \r s -> runRSST rw (f r) s
+    reader f = RSST $ \r s -> return (f r, s)
 
 instance Monad m => MonadWriter [w] (RSST r w s m) where
     writer (a,w) = tell w >> return a
-    tell w = RSST $! \_ (s, ow) -> return ((), (s, ow ++ reverse w))
-    listen rw = RSST $! \r s -> do
+    tell w = RSST $ \_ (s, ow) -> return ((), (s, ow ++ reverse w))
+    listen rw = RSST $ \r s -> do
         (a, (ns, nw)) <- runRSST rw r s
         return ((a, nw), (ns, nw))
-    pass rw = RSST $! \r s -> do
+    pass rw = RSST $ \r s -> do
         ( (a, fw), (s', w) ) <- runRSST rw r s
         return (a, (s', fw w))
 
