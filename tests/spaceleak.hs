@@ -13,4 +13,4 @@ main = do
     print $ RSSS.runRSS (replicateM_ n $ tell $ Sum (1 :: Int)) () ()
     putStrLn "Strict version ok, the next test should explode the stack."
     print $ RSSL.runRSS (replicateM_ n $ tell $ Sum (1 :: Int)) () ()
-    putStrLn "Lazy version have exploded"
+    putStrLn "Lazy version should have exploded !"
