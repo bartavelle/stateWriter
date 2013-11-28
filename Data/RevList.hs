@@ -1,12 +1,13 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 module Data.RevList where
 
-import Prelude hiding (null,init,last,snoc,cons)
+import Prelude hiding (null,init,last)
 import qualified Prelude as Prelude
 import Data.Monoid
 import Control.DeepSeq
 import Control.Lens hiding (cons,snoc)
-import Control.Lens.Cons hiding (cons,snoc)
+import qualified Control.Lens as L
+import Control.Lens.Cons ()
 import Control.Applicative
 
 newtype RevList a = RevList [a]
@@ -43,7 +44,7 @@ last (RevList x) = Prelude.last x
 {-# INLINE last #-}
 
 cons :: a -> RevList a -> RevList a
-cons = undefined
+cons x (RevList xs) = RevList (L.snoc xs x)
 {-# INLINE cons #-}
 
 snoc :: RevList a -> a -> RevList a

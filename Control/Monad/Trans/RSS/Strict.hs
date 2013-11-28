@@ -55,8 +55,7 @@ instance (Monad m) => Monad (RSST r w s m) where
     return a = RSST $ \_ s -> return (a, s)
     m >>= k  = RSST $ \r s -> do
         (a, (s', w))  <- runRSST m r s
-        (b, (s'',w')) <- runRSST (k a) r (s',w)
-        return (b, (s'', w'))
+        runRSST (k a) r (s',w)
     fail msg = RSST $ \_ _ -> fail msg
 
 instance (MonadPlus m) => MonadPlus (RSST r w s m) where
@@ -95,7 +94,9 @@ instance Monad m => MonadReader r (RSST r w s m) where
 
 instance (Monoid w, Monad m) => MonadWriter w (RSST r w s m) where
     writer (a,w) = tell w >> return a
-    tell w = RSST $ \_ (s, ow) -> return ((), (s, ow <> w))
+    tell w = RSST $ \_ (s, ow) ->
+        let nw = ow `mappend` w
+        in  nw `seq` return ((), (s, ow `mappend` w))
     listen rw = RSST $ \r s -> do
         (a, (ns, nw)) <- runRSST rw r s
         return ((a, nw), (ns, nw))
