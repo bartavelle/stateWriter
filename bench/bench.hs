@@ -11,9 +11,9 @@ import Criterion.Main
 
 import qualified Data.Sequence as Seq
 import qualified Data.Vector.Primitive as VP
-import qualified Data.Vector.Storable as VS
-import qualified Data.Vector.Unboxed as VU
-import qualified Data.Vector as V
+import qualified Data.RevList as RL
+import qualified Data.IntSet as IS
+import qualified Data.Set as S
 
 import Control.Monad.RWS
 
@@ -36,12 +36,16 @@ actions cnv = [ ("RSS.Lazy"  , RSSL.runRSS (testActions (tell . cnv)) ())
               ]
 
 main :: IO ()
-main = defaultMain $ mkBench "Seq" Seq.singleton
+main = defaultMain $ [ bench "Snoc list"    (nf (RSSS.runRSS (testActions (RSSS.tellElement :: Int -> RSSS.RSS () [Int] Int () )) ()) benchlen)
+                     , bench "Snoc seq"     (nf (RSSS.runRSS (testActions (RSSS.tellElement :: Int -> RSSS.RSS () (Seq.Seq Int) Int () )) ()) benchlen)
+                     , bench "Snoc revlist" (nf (RSSS.runRSS (testActions (RSSS.tellElement :: Int -> RSSS.RSS () (RL.RevList Int) Int () )) ()) benchlen)
+                     ]
+                  ++ mkBench "Seq" Seq.singleton
                   ++ mkBench "List" (:[])
                   ++ mkBench "Vector Primitive" VP.singleton
-                  ++ mkBench "Vector Storable" VS.singleton
-                  ++ mkBench "Vector Unboxed" VU.singleton
-                  ++ mkBench "Vector" V.singleton
+                  ++ mkBench "RevList" RL.singleton
+                  ++ mkBench "IntSet" IS.singleton
+                  ++ mkBench "Set" S.singleton
     where
         mkBench n = map toBench . actions
             where

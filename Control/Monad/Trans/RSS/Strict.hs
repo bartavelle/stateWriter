@@ -88,8 +88,6 @@ instance Monad m => MonadState s (RSST r w s m) where
     state f = RSST $ \_ (s,w) -> case f s of
                                       (a,s') -> return (a, (s', w))
 
-
-
 instance Monad m => MonadReader r (RSST r w s m) where
     ask = RSST $ \r s -> return (r, s)
     local f rw = RSST $ \r s -> runRSST rw (f r) s
@@ -109,3 +107,4 @@ instance (Monoid w, Monad m) => MonadRWS r w s (RSST r w s m)
 
 tellElement :: (Monad m, Snoc Reviewed Identity cns cns e e) => e -> RSST r cns s m ()
 tellElement w = RSST $ \_ (s, ow) -> return ((), (s, snoc ow w))
+{-# INLINE tellElement #-}
