@@ -3,8 +3,8 @@
 
 name:                stateWriter
 version:             0.2.0
-synopsis:            A version of the RWS and Writer monad transformers that just work with lists.
--- description:         
+synopsis:            A faster variant of the RWS monad transformers.
+description:         This is a version of the RWS monad transformers that should be much faster than what's found in transformers. The writer in the strict version does not leak memory.
 license:             BSD3
 license-file:        LICENSE
 author:              Simon Marechal
@@ -21,7 +21,7 @@ library
   ghc-prof-options:    -caf-all -auto-all
   -- other-modules:       
   other-extensions:    FlexibleInstances, MultiParamTypeClasses
-  build-depends:       base >=4.6 && <4.7, transformers >=0.3 && <0.4, mtl >=2.1 && <2.2, lens >= 3.9 && < 4, deepseq
+  build-depends:       base >=4.6 && <4.7, transformers >=0.3 && <0.4, mtl >=2.1 && <2.2, lens >= 3.9 && < 4
   -- hs-source-dirs:      
   default-language:    Haskell2010
 
