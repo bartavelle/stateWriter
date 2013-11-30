@@ -13,7 +13,6 @@ module Control.Monad.Trans.RSS.Strict (
     evalRSST,
     execRSST,
     withRSST,
-    tellElement
   ) where
 
 import Control.Applicative
@@ -27,9 +26,6 @@ import Control.Monad.State
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Control.Monad.RWS
-
-import Control.Lens.Cons
-import Control.Lens.Internal.Review
 
 -- | A monad containing an environment of type @r@, output of type @w@
 -- and an updatable state of type @s@.
@@ -175,6 +171,3 @@ instance (Monoid w, Monad m) => MonadWriter w (RSST r w s m) where
 
 instance (Monoid w, Monad m) => MonadRWS r w s (RSST r w s m)
 
-tellElement :: (Monad m, Snoc Reviewed Identity cns cns e e) => e -> RSST r cns s m ()
-tellElement w = RSST $ \_ (s, ow) -> return ((), (s, snoc ow w))
-{-# INLINE tellElement #-}
