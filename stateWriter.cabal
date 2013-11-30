@@ -15,6 +15,10 @@ build-type:          Simple
 -- extra-source-files:  
 cabal-version:       >=1.10
 
+source-repository head
+  type: git
+  location: git://github.com/bartavelle/stateWriter.git
+
 library
   exposed-modules:     Control.Monad.Trans.RSS.Lazy, Control.Monad.Trans.RSS.Strict, Control.Monad.RSS.Lazy, Control.Monad.RSS.Strict, Control.Monad.RSS, Control.Monad.Trans.RSS
   ghc-options:         -Wall
