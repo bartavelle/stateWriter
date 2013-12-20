@@ -70,8 +70,6 @@ main = hspec $ do
     describe "Writer part" $ do
         it "logs stuff in the right order, with tell" $
             property $ \listOfLists -> runRSS (mapM_ tell (listOfLists :: [[Int]])) () () == runRWS (mapM_ tell listOfLists) () ()
-        it "logs stuff in the right order, with tellElement" $
-            property $ \list -> runRSS (mapM_ tellElement (list :: [Int])) () () == ((), (), list)
         it "interprets actions the same" $
             property $ \actions -> runRSS (evaluateActions (actions :: Action Int)) 42 12 == runRWS (evaluateActions actions) 42 12
 

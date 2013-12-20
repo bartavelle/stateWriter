@@ -41,10 +41,7 @@ instance NFData a => NFData (D.DList a) where
     rnf d = rnf $ D.toList d
 
 main :: IO ()
-main = defaultMain $ [ bench "Snoc list"    (nf (RSSS.runRSS (testActions (RSSS.tellElement :: Int -> RSSS.RSS () [Int] Int () )) ()) benchlen)
-                     , bench "Snoc seq"     (nf (RSSS.runRSS (testActions (RSSS.tellElement :: Int -> RSSS.RSS () (Seq.Seq Int) Int () )) ()) benchlen)
-                     ]
-                  ++ mkBench "Seq" Seq.singleton
+main = defaultMain $ mkBench "Seq" Seq.singleton
                   ++ mkBench "List" (:[])
                   ++ mkBench "Vector Primitive" VP.singleton
                   ++ mkBench "IntSet" IS.singleton
