@@ -165,9 +165,9 @@ instance (Monoid w, Monad m) => MonadWriter w (RSST r w s m) where
     listen rw = RSST $ \r s -> do
         (a, (ns, nw)) <- runRSST' rw r s
         return ((a, nw), (ns, nw))
-    pass rw = RSST $ \r s -> do
-        ( (a, fw), (s', w) ) <- runRSST' rw r s
-        return (a, (s', fw w))
+    pass rw = RSST $ \r (s, w) -> do
+        ( (a, fw), (s', w') ) <- runRSST' rw r (s, mempty)
+        return (a, (s', w `mappend` fw w'))
 
 instance (Monoid w, Monad m) => MonadRWS r w s (RSST r w s m)
 
