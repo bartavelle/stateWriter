@@ -136,7 +136,7 @@ instance (Functor m, MonadPlus m) => Alternative (RSST r w s m) where
     (<|>) = mplus
 
 instance (MonadFix m) => MonadFix (RSST r w s m) where
-    mfix f = RSST $ \r s -> mfix $ \ (a, _) -> runRSST' (f a) r s
+    mfix f = RSST $ \r s -> mfix $ \ ~(a, _) -> runRSST' (f a) r s
 
 instance MonadTrans (RSST r w s) where
     lift m = RSST $ \_ s -> do
