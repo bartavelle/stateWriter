@@ -15,8 +15,6 @@ import qualified Data.IntSet as IS
 import qualified Data.Set as S
 import qualified Data.DList as D
 
-import Control.DeepSeq
-
 import Control.Monad.RWS
 
 testActions :: (Monoid w, Monad m, MonadRWS () w Int m) => (Int -> m ()) -> m ()
@@ -36,9 +34,6 @@ actions cnv = [ ("RSS.Lazy"  , RSSL.runRSS (testActions (tell . cnv)) ())
               , ("RWS.Lazy"  , RWSL.runRWS (testActions (tell . cnv)) ())
               , ("RWS.Strict", RWSS.runRWS (testActions (tell . cnv)) ())
               ]
-
-instance NFData a => NFData (D.DList a) where
-    rnf d = rnf $ D.toList d
 
 main :: IO ()
 main = defaultMain $ mkBench "Seq" Seq.singleton
