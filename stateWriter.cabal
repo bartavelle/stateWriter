@@ -23,11 +23,8 @@ source-repository head
 library
   exposed-modules:     Control.Monad.Trans.RSS.Lazy, Control.Monad.Trans.RSS.Strict, Control.Monad.RSS.Lazy, Control.Monad.RSS.Strict, Control.Monad.RSS, Control.Monad.Trans.RSS
   ghc-options:         -Wall
-  ghc-prof-options:    -caf-all -auto-all
-  -- other-modules:
   other-extensions:    FlexibleInstances, MultiParamTypeClasses
   build-depends:       base >=4.6 && < 5, transformers >=0.3 && <0.6, mtl >=2.1 && <2.3
-  -- hs-source-dirs:
   default-language:    Haskell2010
 
 test-suite spaceleak
