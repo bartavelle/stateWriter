@@ -27,9 +27,18 @@ Class Applicative (m : Type -> Type) (F: Functor m) := {
   app_composition: forall A B C (u : m (B -> C)) (v : m (A -> B)) (w : m A),
       app u (app v w) =
          app (app (app (pure composition) u) v) w;
-  fmap_pure: forall A B (a : A) (f : A -> B),
-      fmap f (pure a) = pure (f a)
+  fmap_app: forall A B (f : A -> B) (x : m A), app (pure f) x = fmap f x
 }.
+
+Theorem fmap_pure (m : Type -> Type) (AF: Functor m) (AP: Applicative AF) :
+  forall A B (a : A) (f : A -> B),
+      fmap f (pure a) = pure (f a).
+Proof.
+  intros.
+  rewrite <- app_homo.
+  rewrite fmap_app.
+  reflexivity.
+Qed.
 
 Class Monad (m : Type -> Type) (AF: Functor m) (AP: Applicative AF) := {
   bind : forall A B, m A -> (A -> m B) -> m B;
@@ -134,11 +143,12 @@ Proof.
   apply functional_extensionality. intros.
   destruct p0. destruct x. rewrite <- left_unit. unfold composition. reflexivity.
 - (* fmap pure *)
-  intros. unfold fmap. simpl.
+  intros. 
   extensionality r. extensionality sw.
-  rewrite fmap_pure.
-  unfold first.
-  simpl. reflexivity.
+  unfold fmap. simpl. 
+  rewrite <- left_unit.
+  rewrite fstSnd.
+  rewrite fmap_return. reflexivity.
 Defined.
 
 Instance RSSTMonad : forall R W S (M : Type -> Type) (FM : Functor M) (AM : Applicative FM) (MM : Monad AM)
