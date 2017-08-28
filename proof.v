@@ -47,11 +47,34 @@ Class Monad (m : Type -> Type) (AF: Functor m) (AP: Applicative AF) := {
        f a = bind (pure a) f;
   associativity: forall A (ma : m A) B f C (g: B -> m C),
        bind ma (fun x => bind (f x) g) = bind (bind ma f) g;
-  fmap_return: forall A B (ma : m A) (f : A -> B),
-       bind ma (fun a => pure (f a)) = fmap f ma;
-  bind_fmap: forall A B C (ma : m A) (f : A -> B) (mf : B -> m C), 
-       bind (fmap f ma) mf = bind ma (composition mf f)
+  app_bind: forall A B (fs : m (A -> B)) (xs : m A),
+       app A B fs xs = bind fs (fun f => bind xs (fun x => pure (f x)));
 }.
+
+Theorem fmap_return (m : Type -> Type) (AF: Functor m) (AP: Applicative AF) (AM: Monad AP):
+  forall A B (ma : m A) (f : A -> B),
+       bind B ma (fun a => pure (f a)) = fmap f ma.
+Proof.
+  intros.
+  rewrite <- fmap_app.
+  rewrite app_bind.
+  rewrite <- left_unit.
+  reflexivity.
+Qed.
+
+Theorem bind_fmap (m : Type -> Type) (AF: Functor m) (AP: Applicative AF) (AM: Monad AP):
+  forall A B C (ma : m A) (f : A -> B) (mf : B -> m C), 
+       @bind m AF AP AM B C (fmap f ma) mf = @bind m AF AP AM A C ma (composition mf f).
+Proof.
+  intros.
+  rewrite <- (fmap_return AM).
+  rewrite <- associativity.
+  apply f_equal.
+  extensionality x.
+  rewrite <- left_unit.
+  unfold composition.
+  reflexivity.
+Qed.
 
 Definition RSST (R : Type) (W : Type) (S : Type) (M : Type -> Type) (A : Type) :=
  R -> (S * W) -> M (A * (S * W)).
@@ -177,25 +200,11 @@ Proof.
   rewrite <- associativity. apply f_equal.
   extensionality sw'.
   destruct sw'. reflexivity.
-- (* fmap return *)
+- (* app_bind *)
   intros.
   extensionality r. extensionality sw.
   destruct sw.
-  unfold fmap. simpl.
-  rewrite <- fmap_return.
-  unfold first.
-  assert(RW: (fun blob : A * (S * W) => let (a, sw') := blob in pure (f a, sw')) = (fun blob : A*(S*W) => pure (f (fst blob), snd blob))).
-  {
-    extensionality x. destruct x. simpl. reflexivity.
-  }
-  rewrite RW. reflexivity.
-- (* bind_fmap *)
-  intros.
-  extensionality r. extensionality sw.
-  destruct sw.
-  unfold composition, fmap. simpl.
-  rewrite bind_fmap. unfold composition. unfold first.
-  rewrite fstSnd. reflexivity.
+  unfold pure. simpl. reflexivity.
 Defined.
 
 Class StateMonad (S : Type) (m : Type -> Type) (AF: Functor m) (AP: Applicative AF) (AM: Monad AP) := {
@@ -294,7 +303,7 @@ Proof.
   rewrite <- associativity.
   rewrite fmap_return.
   rewrite fmap_dist. simpl.
-  rewrite <- fmap_return.
+  rewrite <- (fmap_return MM).
   apply f_equal.
   extensionality a.
   rewrite <- left_unit.
