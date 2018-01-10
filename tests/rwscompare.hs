@@ -7,6 +7,7 @@ import Test.Hspec
 import Test.QuickCheck
 import Control.Applicative
 import Control.Monad.Free
+import Prelude
 
 data ActionF next = Tell        [Int]         next
                   | SetState    Int           next
@@ -67,9 +68,15 @@ evaluateActions (Pure x) = return x
 
 main :: IO ()
 main = hspec $ do
-    describe "Writer part" $ do
-        it "logs stuff in the right order, with tell" $
-            property $ \listOfLists -> runRSS (mapM_ tell (listOfLists :: [[Int]])) () () == runRWS (mapM_ tell listOfLists) () ()
-        it "interprets actions the same" $
-            property $ \actions -> runRSS (evaluateActions (actions :: Action Int)) 42 12 == runRWS (evaluateActions actions) 42 12
+  describe "Writer part" $ do
+    it "logs stuff in the right order, with tell" $
+      property $ \listOfLists -> runRSS (mapM_ tell (listOfLists :: [[Int]])) () () == runRWS (mapM_ tell listOfLists) () ()
+    it "listen" $
+      runRSS (tell "lol" >> listen (return ())) () () `shouldBe` (((),""),(),"lol")
+    it "listen" $
+      runRSS (tell "lol" >> listen (tell "lal")) () () `shouldBe` (((),"lal"),(),"lollal")
+
+  describe "RWS comparison" $
+    it "interprets actions the same" $
+      property $ \actions -> runRSS (evaluateActions (actions :: Action Int)) 42 12 == runRWS (evaluateActions actions) 42 12
 
