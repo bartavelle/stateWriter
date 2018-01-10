@@ -1,4 +1,7 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Control.Monad.Trans.RSS.Lazy (
     -- * The RWS monad
     RSS,
@@ -13,6 +16,8 @@ module Control.Monad.Trans.RSS.Lazy (
     evalRSST,
     execRSST,
     withRSST,
+    -- * Helpers
+    liftCatch
   ) where
 
 import Control.Applicative
@@ -20,6 +25,8 @@ import Control.Monad
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Class
+import Control.Monad.Except
+import Control.Monad.Signatures
 import Data.Functor.Identity
 
 import Control.Monad.State
@@ -117,23 +124,23 @@ instance (Functor m) => Functor (RSST r w s m) where
         fmap (\ ~(a, (s', w)) -> (f a, (s', w))) $ runRSST' m r s
 
 instance (Monad m) => Monad (RSST r w s m) where
-    return a = RSST $ \_ s -> return (a, s)
+    return = pure
     m >>= k  = RSST $ \r s -> do
         ~(a, (s', w))  <- runRSST' m r s
         runRSST' (k a) r (s',w)
     fail msg = RSST $ \_ _ -> fail msg
 
 instance (MonadPlus m) => MonadPlus (RSST r w s m) where
-    mzero       = RSST $ \_ _ -> mzero
-    m `mplus` n = RSST $ \r s -> runRSST' m r s `mplus` runRSST' n r s
+    mzero = empty
+    mplus = (<|>)
 
 instance (Functor m, Monad m) => Applicative (RSST r w s m) where
-    pure = return
+    pure a = RSST $ \_ s -> pure (a, s)
     (<*>) = ap
 
 instance (Functor m, MonadPlus m) => Alternative (RSST r w s m) where
-    empty = mzero
-    (<|>) = mplus
+    empty = RSST $ \_ _ -> empty
+    m <|> n = RSST $ \r s -> runRSST' m r s <|> runRSST' n r s
 
 instance (MonadFix m) => MonadFix (RSST r w s m) where
     mfix f = RSST $ \r s -> mfix $ \ ~(a, _) -> runRSST' (f a) r s
@@ -172,4 +179,14 @@ instance (Monoid w, Monad m) => MonadWriter w (RSST r w s m) where
         return (a, (s', w `mappend` fw w'))
 
 instance (Monoid w, Monad m) => MonadRWS r w s (RSST r w s m)
+
+instance (Monoid w, MonadError e m) => MonadError e (RSST r w s m) where
+  throwError = lift . throwError
+  catchError = liftCatch catchError
+
+-- | Lift a @catchE@ operation to the new monad.
+liftCatch :: Catch e m (a,(s,w)) -> Catch e (RSST r w s m) a
+liftCatch catchE m h =
+  RSST $ \ r s -> runRSST' m r s `catchE` \ e -> runRSST' (h e) r s
+{-# INLINE liftCatch #-}
 

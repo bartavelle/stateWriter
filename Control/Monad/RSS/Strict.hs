@@ -17,6 +17,7 @@ module Control.Monad.RSS.Strict (
     withRSS,
     -- * The RSST monad transformer
     RSST,
+    runRSST,
     evalRSST,
     execRSST,
     withRSST,
@@ -33,7 +34,7 @@ import Control.Monad.RWS.Class
 import Control.Monad.Trans
 import Control.Monad.Trans.RSS.Strict (
     RSS, rss, runRSS, evalRSS, execRSS, withRSS,
-    RSST, evalRSST, execRSST, withRSST)
+    RSST, evalRSST, execRSST, withRSST, runRSST)
 
 import Control.Monad
 import Control.Monad.Fix

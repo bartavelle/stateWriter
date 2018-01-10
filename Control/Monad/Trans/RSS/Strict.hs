@@ -1,4 +1,7 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Control.Monad.Trans.RSS.Strict (
     -- * The RWS monad
     RSS,
@@ -13,6 +16,8 @@ module Control.Monad.Trans.RSS.Strict (
     evalRSST,
     execRSST,
     withRSST,
+    -- * Helpers
+    liftCatch
   ) where
 
 import Control.Applicative
@@ -20,6 +25,8 @@ import Control.Monad
 import Control.Monad.Fix
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Class
+import Control.Monad.Except
+import Control.Monad.Signatures
 import Data.Functor.Identity
 
 import Control.Monad.State
@@ -115,60 +122,92 @@ withRSST f m = RSST $ \r (s,w) ->
 instance (Functor m) => Functor (RSST r w s m) where
     fmap f m = RSST $ \r s ->
         fmap (\ (a, (s', w)) -> (f a, (s', w))) $ runRSST' m r s
+    {-# INLINE fmap #-}
 
 instance (Monad m) => Monad (RSST r w s m) where
-    return a = RSST $ \_ s -> return (a, s)
+    return = pure
+    {-# INLINE return #-}
     m >>= k  = RSST $ \r s -> do
         (a, (s', w))  <- runRSST' m r s
         runRSST' (k a) r (s',w)
+    {-# INLINE (>>=) #-}
     fail msg = RSST $ \_ _ -> fail msg
 
 instance (MonadPlus m) => MonadPlus (RSST r w s m) where
-    mzero       = RSST $ \_ _ -> mzero
-    m `mplus` n = RSST $ \r s -> runRSST' m r s `mplus` runRSST' n r s
+    mzero = empty
+    {-# INLINE mzero #-}
+    mplus = (<|>)
+    {-# INLINE mplus #-}
 
 instance (Functor m, Monad m) => Applicative (RSST r w s m) where
-    pure = return
+    pure a = RSST $ \_ s -> pure (a, s)
+    {-# INLINE pure #-}
     (<*>) = ap
+    {-# INLINE (<*>) #-}
 
 instance (Functor m, MonadPlus m) => Alternative (RSST r w s m) where
-    empty = mzero
-    (<|>) = mplus
+    empty   = RSST $ \_ _ -> empty
+    {-# INLINE empty #-}
+    m <|> n = RSST $ \r s -> runRSST' m r s <|> runRSST' n r s
+    {-# INLINE (<|>) #-}
 
 instance (MonadFix m) => MonadFix (RSST r w s m) where
     mfix f = RSST $ \r s -> mfix $ \ ~(a, _) -> runRSST' (f a) r s
+    {-# INLINE mfix #-}
 
 instance MonadTrans (RSST r w s) where
     lift m = RSST $ \_ s -> do
         a <- m
         return (a, s)
+    {-# INLINE lift #-}
 
 instance (MonadIO m) => MonadIO (RSST r w s m) where
     liftIO = lift . liftIO
+    {-# INLINE liftIO #-}
 
 instance Monad m => MonadState s (RSST r w s m) where
     get = RSST $ \_ (s,w) -> return (s,(s,w))
+    {-# INLINE get #-}
     put ns = RSST $ \_ (_,w) -> return ((),(ns,w))
+    {-# INLINE put #-}
     state f = RSST $ \_ (s,w) -> case f s of
                                       (a,s') -> return (a, (s', w))
+    {-# INLINE state #-}
 
 instance Monad m => MonadReader r (RSST r w s m) where
     ask = RSST $ \r s -> return (r, s)
+    {-# INLINE ask #-}
     local f rw = RSST $ \r s -> runRSST' rw (f r) s
+    {-# INLINE local #-}
     reader f = RSST $ \r s -> return (f r, s)
+    {-# INLINE reader #-}
 
 instance (Monoid w, Monad m) => MonadWriter w (RSST r w s m) where
     writer (a,w) = tell w >> return a
+    {-# INLINE writer #-}
     tell w = RSST $ \_ (s, ow) ->
         let nw = ow `mappend` w
         in  nw `seq` return ((), (s,  nw))
+    {-# INLINE tell #-}
     listen rw = RSST $ \r (s, w) -> do
         (a, (ns, nw)) <- runRSST' rw r (s,mempty)
         let ow = w `mappend` nw
         ow `seq` return ((a, nw), (ns, ow))
+    {-# INLINE listen #-}
     pass rw = RSST $ \r (s, w) -> do
         ( (a, fw), (s', w') ) <- runRSST' rw r (s, mempty)
         return (a, (s', w `mappend` fw w'))
+    {-# INLINE pass #-}
 
 instance (Monoid w, Monad m) => MonadRWS r w s (RSST r w s m)
+
+instance (Monoid w, MonadError e m) => MonadError e (RSST r w s m) where
+  throwError = lift . throwError
+  catchError = liftCatch catchError
+
+-- | Lift a @catchE@ operation to the new monad.
+liftCatch :: Catch e m (a,(s,w)) -> Catch e (RSST r w s m) a
+liftCatch catchE m h =
+  RSST $ \ r s -> runRSST' m r s `catchE` \ e -> runRSST' (h e) r s
+{-# INLINE liftCatch #-}
 
