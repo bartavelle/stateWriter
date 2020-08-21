@@ -131,6 +131,8 @@ instance (Monad m) => Monad (RSST r w s m) where
         (a, (s', w))  <- runRSST' m r s
         runRSST' (k a) r (s',w)
     {-# INLINE (>>=) #-}
+
+instance (MonadFail m) => MonadFail (RSST r w s m) where
     fail msg = RSST $ \_ _ -> fail msg
 
 instance (MonadPlus m) => MonadPlus (RSST r w s m) where

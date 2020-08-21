@@ -5,6 +5,7 @@ import Control.Monad.Trans.RSS.Strict
 import Control.Monad.RWS
 import Test.Hspec
 import Test.QuickCheck
+import Data.Functor.Classes
 import Control.Applicative
 import Control.Monad.Free
 import Prelude
@@ -57,6 +58,14 @@ instance Show next => Show (ActionF next) where
     show (AskAndStore i n) = "AskAndStore " ++ show i ++ " / " ++ show n
     show (GetAndStore i n) = "GetAndStore " ++ show i ++ " / " ++ show n
     show (Modify s n) = "Modify " ++ show s ++ " / " ++ show n
+
+instance Show1 ActionF where
+  liftShowsPrec showp _ _ a = case a of
+    Tell x n -> showString "Tell " . shows x . showString " / " . showp 0 n
+    SetState s n -> showString "Set " . shows s . showString " / " . showp 0 n
+    AskAndStore i n -> showString "AskAndStore " . shows i . showString " / " . showp 0 n
+    GetAndStore i n -> showString "GetAndStore " . shows i . showString " / " . showp 0 n
+    Modify s n -> showString "Modify " . shows s . showString " / " . showp 0 n
 
 evaluateActions :: (MonadRWS Int [Int] Int m) => Action x -> m x
 evaluateActions (Free (Tell x next))        = tell x >>  evaluateActions next
