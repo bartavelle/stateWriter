@@ -14,7 +14,7 @@ category:            Control
 build-type:          Simple
 -- extra-source-files:
 cabal-version:       >=1.10
-Tested-With:         GHC == 7.10.3, GHC == 8.0.1, GHC == 8.2.1
+Tested-With:         GHC == 8.6.5, GHC == 8.8.4, GHC == 8.10.2
 
 source-repository head
   type: git
